@@ -1,0 +1,208 @@
+.qr-scanner {
+  width: 100%;
+}
+
+.qr-scanner h1 {
+  margin-bottom: 2rem;
+  color: #212529;
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.scanner-container {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.08);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.scanner-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+}
+
+.btn-start,
+.btn-stop {
+  margin-top: 1rem;
+  padding: 0.75rem 2rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 0 0 220px;
+  box-sizing: border-box;
+}
+
+.btn-start {
+  background: linear-gradient(135deg, #198754 0%, #20c997 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(25, 135, 84, 0.3);
+}
+
+.btn-start:hover {
+  background: linear-gradient(135deg, #157347 0%, #1aa179 100%);
+  box-shadow: 0 4px 12px rgba(25, 135, 84, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-stop {
+  background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+.btn-stop:hover {
+  background: linear-gradient(135deg, #c82333 0%, #d32f2f 100%);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+  transform: translateY(-1px);
+}
+
+.scanner-controls {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1rem;
+  align-items: stretch;
+}
+
+.btn-manual {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 6px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  flex: 0 0 220px;
+  box-sizing: border-box;
+  margin-top: 1rem;
+}
+
+.btn-manual:hover {
+  background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  transform: translateY(-1px);
+}
+
+.manual-entry {
+  padding: 2rem;
+  text-align: left;
+}
+
+.manual-entry h3 {
+  margin-bottom: 1rem;
+  color: #2c3e50;
+}
+
+.manual-entry p {
+  margin-bottom: 1.5rem;
+  color: #666;
+}
+
+.ticket-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  font-family: 'Courier New', monospace;
+}
+
+.ticket-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.manual-controls {
+  display: flex;
+  gap: 1rem;
+}
+
+.btn-verify {
+  background: linear-gradient(135deg, #198754 0%, #20c997 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 6px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(25, 135, 84, 0.3);
+}
+
+.btn-verify:hover:not(:disabled) {
+  background: linear-gradient(135deg, #157347 0%, #1aa179 100%);
+  box-shadow: 0 4px 12px rgba(25, 135, 84, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-verify:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-cancel {
+  background-color: #95a5a6;
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.btn-cancel:hover {
+  background-color: #7f8c8d;
+}
+
+.message {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 4px;
+}
+
+.message.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.message.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.scanner-info {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  color: #856404;
+  font-size: 0.9rem;
+}
+
+.scanner-info p {
+  margin: 0;
+}
+

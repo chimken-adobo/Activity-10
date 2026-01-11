@@ -1,0 +1,97 @@
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import Layout from '../components/Layout';
+import { eventsApi, ticketsApi } from '../services/api';
+import './EventDetails.css';
+
+const EventDetails = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const { data: event, isLoading } = useQuery({
+    queryKey: ['event', id],
+    queryFn: () => eventsApi.getById(id!),
+  });
+
+  const registerMutation = useMutation({
+    mutationFn: () => ticketsApi.register(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-tickets'] });
+      alert('Successfully registered! Check your email for the ticket.');
+      navigate('/my-tickets');
+    },
+    onError: (error: any) => {
+      alert(error.response?.data?.message || 'Registration failed');
+    },
+  });
+
+  if (isLoading) return <Layout><div>Loading...</div></Layout>;
+
+  if (!event) return <Layout><div>Event not found</div></Layout>;
+
+  const isFull = event.registeredCount >= event.capacity;
+  const isPast = new Date(event.startDate) < new Date();
+
+  return (
+    <Layout>
+      <div className="event-details">
+        <h1>{event.title}</h1>
+        {event.imageUrl && event.imageUrl.trim() !== '' && (
+          <div className="event-image-container">
+            <img 
+              src={event.imageUrl} 
+              alt={event.title} 
+              className="event-image"
+              onError={(e) => {
+                // Hide broken images
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          </div>
+        )}
+        <div className="event-info">
+          <div className="info-section">
+            <h3>Description</h3>
+            <p>{event.description}</p>
+          </div>
+
+          <div className="info-grid">
+            <div className="info-item">
+              <strong>Start Date:</strong>
+              <p>{new Date(event.startDate).toLocaleString()}</p>
+            </div>
+            <div className="info-item">
+              <strong>End Date:</strong>
+              <p>{new Date(event.endDate).toLocaleString()}</p>
+            </div>
+            <div className="info-item">
+              <strong>Location:</strong>
+              <p>{event.location}</p>
+            </div>
+            <div className="info-item">
+              <strong>Available Spots:</strong>
+              <p>{event.capacity - event.registeredCount} / {event.capacity}</p>
+            </div>
+          </div>
+
+          {!isPast && !isFull && (
+            <button
+              onClick={() => registerMutation.mutate()}
+              className="btn-register"
+              disabled={registerMutation.isPending}
+            >
+              {registerMutation.isPending ? 'Registering...' : 'Register for Event'}
+            </button>
+          )}
+
+          {isFull && <p className="error-message">Event is at full capacity</p>}
+          {isPast && <p className="error-message">Event has already passed</p>}
+        </div>
+      </div>
+    </Layout>
+  );
+};
+
+export default EventDetails;
+
