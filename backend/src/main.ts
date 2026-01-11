@@ -2,6 +2,9 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { json, urlencoded } from 'express';
+import { getDataSourceToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+import { seedAdmin } from './seed-admin';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -21,6 +24,14 @@ async function bootstrap() {
     whitelist: true,
     transform: true,
   }));
+
+  // Seed admin user
+  try {
+    const dataSource = app.get<DataSource>(getDataSourceToken());
+    await seedAdmin(dataSource);
+  } catch (error) {
+    console.error('Error seeding admin user:', error);
+  }
 
   const port = process.env.PORT || 3000;
   await app.listen(port);

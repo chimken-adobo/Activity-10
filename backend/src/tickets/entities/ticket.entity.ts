@@ -29,8 +29,7 @@ export class Ticket {
   qrCode: string;
 
   @Column({
-    type: 'enum',
-    enum: TicketStatus,
+    type: 'varchar',
     default: TicketStatus.CONFIRMED,
   })
   status: TicketStatus;

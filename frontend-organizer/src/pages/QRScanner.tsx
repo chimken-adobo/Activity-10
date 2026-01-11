@@ -36,49 +36,64 @@ const QRScanner = () => {
   });
 
   useEffect(() => {
-    if (scanning && !scanner) {
+    // Initialize scanner once on mount
+    if (!scanner) {
       const html5QrCode = new Html5Qrcode('reader');
       setScanner(html5QrCode);
     }
 
     return () => {
+      // Cleanup on unmount
       if (scanner) {
         scanner.stop().catch(() => {});
         scanner.clear().catch(() => {});
       }
     };
-  }, [scanning, scanner]);
+  }, []); // Only run on mount
 
   const startScanning = async () => {
-    if (!scanner) {
-      setError('Scanner not initialized. Please try again.');
-      setScanning(false);
-      return;
-    }
-
     setError('');
     setMessage('');
 
+    // Ensure scanner is initialized
+    let currentScanner = scanner;
+    if (!currentScanner) {
+      currentScanner = new Html5Qrcode('reader');
+      setScanner(currentScanner);
+    }
+
     try {
-      // Try to get available cameras first
-      const cameras = await Html5Qrcode.getCameras();
+      setMessage('Requesting camera access...');
       
-      if (cameras.length === 0) {
-        setError('No cameras found. Please connect a camera and try again.');
-        setScanning(false);
-        return;
+      // Try to get available cameras first
+      let cameras: any[] = [];
+      try {
+        cameras = await Html5Qrcode.getCameras();
+      } catch (err: any) {
+        console.error('Error getting cameras:', err);
+        // If getCameras fails, try with facingMode directly
+      }
+      
+      let cameraIdOrConfig: string | { facingMode: string };
+      
+      if (cameras.length > 0) {
+        // Use the first available camera
+        cameraIdOrConfig = cameras[0].id;
+        console.log('Using camera:', cameras[0].label || cameras[0].id);
+      } else {
+        // Fallback to environment facing mode (back camera on mobile, default on desktop)
+        cameraIdOrConfig = { facingMode: 'environment' };
+        console.log('No cameras found via getCameras, trying facingMode');
       }
 
-      // Use the first available camera (or try environment facing mode)
-      const cameraIdOrConfig = cameras.length > 0 
-        ? cameras[0].id 
-        : { facingMode: 'environment' };
+      setMessage('Starting camera...');
 
-      await scanner.start(
+      await currentScanner.start(
         cameraIdOrConfig,
         {
           fps: 10,
           qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
         },
         (decodedText) => {
           handleQrCodeScanned(decodedText);
@@ -96,15 +111,17 @@ const QRScanner = () => {
       
       let errorMsg = 'Failed to start camera. ';
       if (err.name === 'NotAllowedError' || err.message?.includes('permission')) {
-        errorMsg += 'Please allow camera access in your browser settings.';
+        errorMsg += 'Please allow camera access in your browser settings and refresh the page.';
       } else if (err.name === 'NotFoundError' || err.message?.includes('no camera')) {
         errorMsg += 'No camera found. Please ensure your camera is connected and not being used by another application.';
       } else if (err.name === 'NotReadableError' || err.message?.includes('could not start')) {
-        errorMsg += 'Camera is already in use or not accessible. Close other applications using the camera.';
+        errorMsg += 'Camera is already in use or not accessible. Close other applications using the camera and try again.';
       } else if (err.message?.includes('WiFi') || err.message?.includes('wireless')) {
         errorMsg += 'WiFi/wireless cameras are not supported. Please use a built-in webcam or USB camera.';
+      } else if (err.message?.includes('HTTPS') || err.message?.includes('secure context')) {
+        errorMsg += 'Camera access requires HTTPS. If running locally, try using http://localhost instead.';
       } else {
-        errorMsg += err.message || 'Please check your camera connection and try again.';
+        errorMsg += (err.message || 'Please check your camera connection and try again.');
       }
       
       setError(errorMsg);
@@ -112,7 +129,9 @@ const QRScanner = () => {
       
       // Clean up scanner on error
       try {
-        await scanner.clear();
+        if (currentScanner) {
+          await currentScanner.clear();
+        }
       } catch (clearErr) {
         // Ignore clear errors
       }
@@ -153,8 +172,8 @@ const QRScanner = () => {
       await stopScanning();
     } else {
       setScanning(true);
-      // Small delay to ensure scanner is initialized
-      setTimeout(() => startScanning(), 200);
+      // Start scanning immediately
+      await startScanning();
     }
   };
 

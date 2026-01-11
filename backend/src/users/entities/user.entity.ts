@@ -33,8 +33,7 @@ export class User {
   company: string;
 
   @Column({
-    type: 'enum',
-    enum: UserRole,
+    type: 'varchar',
     default: UserRole.ATTENDEE,
   })
   role: UserRole;

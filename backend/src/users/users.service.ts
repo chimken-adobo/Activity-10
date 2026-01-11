@@ -18,8 +18,9 @@ export class UsersService {
       throw new ConflictException('User with this email already exists');
     }
 
-    // Hash password if provided
-    if (userData.password) {
+    // Note: Password should already be hashed when passed from auth service
+    // Only hash if it's a plain text password (check if it's already hashed)
+    if (userData.password && !userData.password.startsWith('$2b$') && !userData.password.startsWith('$2a$')) {
       userData.password = await bcrypt.hash(userData.password, 10);
     }
 

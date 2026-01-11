@@ -25,10 +25,10 @@ export class Event {
   @Column()
   location: string;
 
-  @Column({ type: 'datetime' })
+  @Column('datetime')
   startDate: Date;
 
-  @Column({ type: 'datetime' })
+  @Column('datetime')
   endDate: Date;
 
   @Column({ default: 0 })
@@ -40,7 +40,7 @@ export class Event {
   @Column({ default: true })
   isActive: boolean;
 
-  @Column({ type: 'longtext', nullable: true })
+  @Column({ type: 'text', nullable: true })
   imageUrl: string;
 
   @ManyToOne(() => User, (user) => user.events)
