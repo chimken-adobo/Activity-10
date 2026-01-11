@@ -3,22 +3,26 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: #f8f9fa;
 }
 
 .login-card {
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  padding: 3rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e9ecef;
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
 }
 
 .login-card h1 {
   margin-bottom: 2rem;
   text-align: center;
-  color: #2c3e50;
+  color: #212529;
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .form-group {
@@ -28,44 +32,58 @@
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
-  color: #555;
+  color: #495057;
   font-weight: 500;
+  font-size: 0.9375rem;
 }
 
 .form-group input {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  padding: 0.75rem 1rem;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
   font-size: 1rem;
+  transition: all 0.2s ease;
+  background-color: #ffffff;
+  color: #212529;
 }
 
 .form-group input:focus {
   outline: none;
   border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .error {
-  color: #e74c3c;
+  color: #495057;
   margin-bottom: 1rem;
-  padding: 0.5rem;
-  background-color: #fee;
-  border-radius: 4px;
+  padding: 0.75rem;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  font-size: 0.9375rem;
 }
 
 .login-card button {
   width: 100%;
-  padding: 0.75rem;
-  background-color: #667eea;
-  color: white;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #ffffff;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 1rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
 .login-card button:hover {
-  background-color: #5568d3;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  transform: translateY(-1px);
+}
+
+.login-card button:active {
+  transform: translateY(0);
 }
 

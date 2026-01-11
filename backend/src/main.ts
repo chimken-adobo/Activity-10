@@ -23,6 +23,11 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     transform: true,
+    forbidNonWhitelisted: false,
+    skipMissingProperties: false, // Don't skip - validate all provided properties
+    transformOptions: {
+      enableImplicitConversion: true, // Allow type conversion
+    },
   }));
 
   // Seed admin user

@@ -105,5 +105,48 @@ export class EmailService {
       throw error;
     }
   }
+
+  async sendEventCancellation(
+    emails: string[],
+    eventTitle: string,
+    eventDate: Date,
+    eventLocation: string,
+  ): Promise<void> {
+    const formattedDate = eventDate.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const mailOptions = {
+      from: this.configService.get<string>('SMTP_FROM') || 'noreply@events.com',
+      to: emails.join(','),
+      subject: `Event Cancelled: ${eventTitle}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #dc3545;">Event Cancellation Notice</h2>
+          <p>We regret to inform you that the following event has been cancelled:</p>
+          <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0;">${eventTitle}</h3>
+            <p><strong>Date:</strong> ${formattedDate}</p>
+            <p><strong>Location:</strong> ${eventLocation}</p>
+          </div>
+          <p>We sincerely apologize for any inconvenience this may cause. If you have any questions or concerns, please don't hesitate to contact us.</p>
+          <p>Thank you for your understanding.</p>
+          <p>Best regards,<br>Event Management Team</p>
+        </div>
+      `,
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+    } catch (error) {
+      console.error('Error sending cancellation email:', error);
+      throw error;
+    }
+  }
 }
 

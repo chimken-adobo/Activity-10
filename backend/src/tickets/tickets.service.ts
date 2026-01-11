@@ -25,9 +25,18 @@ export class TicketsService {
 
   async registerForEvent(
     registerDto: RegisterForEventDto,
-    attendeeId: string,
+    attendeeId: string | number,
   ): Promise<Ticket> {
-    const event = await this.eventsService.findOne(registerDto.eventId);
+    const eventId = typeof registerDto.eventId === 'string' ? parseInt(registerDto.eventId, 10) : registerDto.eventId;
+    if (isNaN(eventId)) {
+      throw new BadRequestException('Invalid event ID');
+    }
+    const attendeeIdNum = typeof attendeeId === 'string' ? parseInt(attendeeId, 10) : attendeeId;
+    if (isNaN(attendeeIdNum)) {
+      throw new BadRequestException('Invalid attendee ID');
+    }
+    
+    const event = await this.eventsService.findOne(eventId);
 
     // Check if event is active
     if (!event.isActive) {
@@ -42,8 +51,8 @@ export class TicketsService {
     // Check for duplicate registration
     const existingTicket = await this.ticketsRepository.findOne({
       where: {
-        eventId: registerDto.eventId,
-        attendeeId: attendeeId,
+        eventId: eventId,
+        attendeeId: attendeeIdNum,
         status: TicketStatus.CONFIRMED,
       },
     });
@@ -59,7 +68,7 @@ export class TicketsService {
     const qrCodeData = JSON.stringify({
       ticketId,
       eventId: event.id,
-      attendeeId,
+      attendeeId: attendeeIdNum,
     });
     const qrCode = await QRCode.toDataURL(qrCodeData);
 
@@ -67,8 +76,8 @@ export class TicketsService {
     const ticket = this.ticketsRepository.create({
       ticketId,
       qrCode,
-      eventId: registerDto.eventId,
-      attendeeId,
+      eventId: eventId,
+      attendeeId: attendeeIdNum,
       status: TicketStatus.CONFIRMED,
     });
 
@@ -78,7 +87,7 @@ export class TicketsService {
     await this.eventsService.incrementRegisteredCount(event.id);
 
     // Get attendee info for email
-    const attendee = await this.usersService.findOne(attendeeId);
+    const attendee = await this.usersService.findOne(attendeeIdNum);
 
     // Send confirmation email
     await this.emailService.sendTicketConfirmation(
@@ -92,8 +101,8 @@ export class TicketsService {
   }
 
   async findAll(filters?: {
-    eventId?: string;
-    attendeeId?: string;
+    eventId?: string | number;
+    attendeeId?: string | number;
     status?: TicketStatus;
   }): Promise<Ticket[]> {
     const query = this.ticketsRepository
@@ -102,13 +111,19 @@ export class TicketsService {
       .leftJoinAndSelect('ticket.attendee', 'attendee');
 
     if (filters?.eventId) {
-      query.andWhere('ticket.eventId = :eventId', { eventId: filters.eventId });
+      const eventId = typeof filters.eventId === 'string' ? parseInt(filters.eventId, 10) : filters.eventId;
+      if (!isNaN(eventId)) {
+        query.andWhere('ticket.eventId = :eventId', { eventId });
+      }
     }
 
     if (filters?.attendeeId) {
-      query.andWhere('ticket.attendeeId = :attendeeId', {
-        attendeeId: filters.attendeeId,
-      });
+      const attendeeId = typeof filters.attendeeId === 'string' ? parseInt(filters.attendeeId, 10) : filters.attendeeId;
+      if (!isNaN(attendeeId)) {
+        query.andWhere('ticket.attendeeId = :attendeeId', {
+          attendeeId,
+        });
+      }
     }
 
     if (filters?.status) {
@@ -120,9 +135,13 @@ export class TicketsService {
     return query.getMany();
   }
 
-  async findOne(id: string): Promise<Ticket> {
+  async findOne(id: string | number): Promise<Ticket> {
+    const ticketId = typeof id === 'string' ? parseInt(id, 10) : id;
+    if (isNaN(ticketId)) {
+      throw new NotFoundException('Invalid ticket ID');
+    }
     const ticket = await this.ticketsRepository.findOne({
-      where: { id },
+      where: { id: ticketId },
       relations: ['event', 'attendee'],
     });
     if (!ticket) {
@@ -159,10 +178,11 @@ export class TicketsService {
     return this.ticketsRepository.save(ticket);
   }
 
-  async cancelTicket(id: string, attendeeId: string): Promise<Ticket> {
+  async cancelTicket(id: string | number, attendeeId: string | number): Promise<Ticket> {
     const ticket = await this.findOne(id);
+    const attendeeIdNum = typeof attendeeId === 'string' ? parseInt(attendeeId, 10) : attendeeId;
 
-    if (ticket.attendeeId !== attendeeId) {
+    if (ticket.attendeeId !== attendeeIdNum) {
       throw new BadRequestException('You can only cancel your own tickets');
     }
 
@@ -184,9 +204,13 @@ export class TicketsService {
     return savedTicket;
   }
 
-  async updateTicket(id: string, updateData: Partial<Ticket>): Promise<Ticket> {
-    await this.ticketsRepository.update(id, updateData);
-    return this.findOne(id);
+  async updateTicket(id: string | number, updateData: Partial<Ticket>): Promise<Ticket> {
+    const ticketId = typeof id === 'string' ? parseInt(id, 10) : id;
+    if (isNaN(ticketId)) {
+      throw new NotFoundException('Invalid ticket ID');
+    }
+    await this.ticketsRepository.update(ticketId, updateData);
+    return this.findOne(ticketId);
   }
 }
 

@@ -45,6 +45,10 @@ export const eventsApi = {
     const response = await api.delete(`/events/${id}`);
     return response.data;
   },
+  cancel: async (id: string) => {
+    const response = await api.post(`/events/${id}/cancel`);
+    return response.data;
+  },
 };
 
 export const ticketsApi = {
@@ -54,6 +58,13 @@ export const ticketsApi = {
   },
   verify: async (ticketId: string) => {
     const response = await api.post(`/tickets/verify/${ticketId}`);
+    return response.data;
+  },
+};
+
+export const usersApi = {
+  getAllAttendees: async () => {
+    const response = await api.get('/users/attendees');
     return response.data;
   },
 };

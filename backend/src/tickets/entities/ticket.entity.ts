@@ -19,8 +19,8 @@ export enum TicketStatus {
 
 @Entity('tickets')
 export class Ticket {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column({ unique: true })
   ticketId: string;
@@ -39,14 +39,14 @@ export class Ticket {
   attendee: User;
 
   @Column()
-  attendeeId: string;
+  attendeeId: number;
 
   @ManyToOne(() => Event, (event) => event.tickets)
   @JoinColumn({ name: 'eventId' })
   event: Event;
 
   @Column()
-  eventId: string;
+  eventId: number;
 
   @Column({ nullable: true })
   checkedInAt: Date;

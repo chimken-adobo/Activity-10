@@ -50,6 +50,13 @@ export class EventsController {
     return this.eventsService.create(createEventDto, user.id);
   }
 
+  @Post(':id/cancel')
+  @UseGuards(JwtAuthGuard)
+  async cancel(@Param('id') id: string, @CurrentUser() user: any) {
+    await this.eventsService.cancel(id, user.id, user.role);
+    return { message: 'Event cancelled and deleted successfully' };
+  }
+
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
   async update(
@@ -57,10 +64,33 @@ export class EventsController {
     @Body() updateEventDto: UpdateEventDto,
     @CurrentUser() user: any,
   ) {
+    console.log('Received update request:', { id, updateEventDto });
+    
     // Convert empty string to null for imageUrl to allow image removal
     if (updateEventDto.imageUrl === '') {
       updateEventDto.imageUrl = null;
     }
+    // Remove empty strings to avoid validation issues
+    if (updateEventDto.title === '') {
+      delete updateEventDto.title;
+    }
+    if (updateEventDto.description === '') {
+      delete updateEventDto.description;
+    }
+    if (updateEventDto.location === '') {
+      delete updateEventDto.location;
+    }
+    if (updateEventDto.startDate === '') {
+      delete updateEventDto.startDate;
+    }
+    if (updateEventDto.endDate === '') {
+      delete updateEventDto.endDate;
+    }
+    if (updateEventDto.capacity === null || updateEventDto.capacity === undefined) {
+      delete updateEventDto.capacity;
+    }
+    
+    console.log('Processed update DTO:', updateEventDto);
     return this.eventsService.update(id, updateEventDto, user.id, user.role);
   }
 

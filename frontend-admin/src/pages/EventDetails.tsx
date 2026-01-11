@@ -1,12 +1,11 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
-import { eventsApi } from '../services/api';
+import { eventsApi, ticketsApi } from '../services/api';
 import './EventDetails.css';
 
 const EventDetails = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const { data: event, isLoading } = useQuery({
@@ -14,32 +13,43 @@ const EventDetails = () => {
     queryFn: () => eventsApi.getById(id!),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: () => eventsApi.delete(id!),
+  const registerMutation = useMutation({
+    mutationFn: () => ticketsApi.register(id!),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
-      navigate('/events');
+      queryClient.invalidateQueries({ queryKey: ['my-tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['event', id] });
+      alert('Successfully registered! Check your email for the ticket.');
+    },
+    onError: (error: any) => {
+      alert(error.response?.data?.message || 'Registration failed');
     },
   });
+
 
   if (isLoading) return <Layout><div>Loading...</div></Layout>;
 
   if (!event) return <Layout><div>Event not found</div></Layout>;
+
+  const isFull = event.registeredCount >= event.capacity;
+  const isPast = new Date(event.endDate) < new Date();
 
   return (
     <Layout>
       <div className="event-details">
         <div className="event-header">
           <h1>{event.title}</h1>
-          <div className="actions">
-            <button onClick={() => navigate('/organizer-dashboard', { state: { editEventId: id } })}>Edit</button>
-            <button onClick={() => deleteMutation.mutate()} className="delete-btn">
-              Delete
-            </button>
-          </div>
         </div>
 
         <div className="event-info">
+          {event.imageUrl && event.imageUrl.trim() !== '' ? (
+            <div className="event-image">
+              <img src={event.imageUrl} alt={event.title} />
+            </div>
+          ) : (
+            <div className="event-image no-image">
+              <div className="no-image-placeholder">No image attached</div>
+            </div>
+          )}
           <div className="info-section">
             <h3>Description</h3>
             <p>{event.description}</p>
@@ -47,32 +57,55 @@ const EventDetails = () => {
 
           <div className="info-grid">
             <div className="info-item">
-              <strong>Start Date:</strong>
+              <div className="info-item-header">
+                <span className="info-icon">📅</span>
+                <strong>Start Date</strong>
+              </div>
               <p>{new Date(event.startDate).toLocaleString()}</p>
             </div>
             <div className="info-item">
-              <strong>End Date:</strong>
+              <div className="info-item-header">
+                <span className="info-icon">📅</span>
+                <strong>End Date</strong>
+              </div>
               <p>{new Date(event.endDate).toLocaleString()}</p>
             </div>
             <div className="info-item">
-              <strong>Location:</strong>
+              <div className="info-item-header">
+                <span className="info-icon">📍</span>
+                <strong>Location</strong>
+              </div>
               <p>{event.location}</p>
             </div>
             <div className="info-item">
-              <strong>Capacity:</strong>
+              <div className="info-item-header">
+                <span className="info-icon">👥</span>
+                <strong>Capacity</strong>
+              </div>
               <p>{event.registeredCount} / {event.capacity}</p>
             </div>
             <div className="info-item">
-              <strong>Status:</strong>
-              <p className={event.isActive ? 'status-active' : 'status-inactive'}>
-                {event.isActive ? 'Active' : 'Inactive'}
-              </p>
-            </div>
-            <div className="info-item">
-              <strong>Organizer:</strong>
+              <div className="info-item-header">
+                <span className="info-icon">👤</span>
+                <strong>Organizer</strong>
+              </div>
               <p>{event.organizer?.name || 'N/A'}</p>
             </div>
           </div>
+
+          {!isPast && !isFull && event.isActive && (
+            <button
+              onClick={() => registerMutation.mutate()}
+              className="btn-register"
+              disabled={registerMutation.isPending}
+            >
+              {registerMutation.isPending ? 'Registering...' : 'Register for Event'}
+            </button>
+          )}
+
+          {isFull && <p className="error-message">Event is at full capacity</p>}
+          {isPast && <p className="error-message">Event has already passed</p>}
+          {!event.isActive && <p className="error-message">Event is not active</p>}
         </div>
       </div>
     </Layout>

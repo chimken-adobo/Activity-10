@@ -42,6 +42,13 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
+  @Get('attendees')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.ORGANIZER)
+  async findAllAttendees() {
+    return this.usersService.findAll(UserRole.ATTENDEE);
+  }
+
   @Get(':id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)

@@ -50,6 +50,10 @@ export const eventsApi = {
     const response = await api.delete(`/events/${id}`);
     return response.data;
   },
+  cancel: async (id: string) => {
+    const response = await api.post(`/events/${id}/cancel`);
+    return response.data;
+  },
 };
 
 export const ticketsApi = {

@@ -21,6 +21,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="nav-brand">Organizer Portal</div>
         <div className="nav-links">
           <Link to="/">Dashboard</Link>
+          <Link to="/attendees">Attendees</Link>
           <Link to="/events">My Events</Link>
           <div className="user-info">
             <span>{user?.name}</span>

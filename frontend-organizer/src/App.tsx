@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import EventManagement from './pages/EventManagement';
 import AttendeesList from './pages/AttendeesList';
+import AllAttendees from './pages/AllAttendees';
 import QRScanner from './pages/QRScanner';
 import PrivateRoute from './components/PrivateRoute';
 
@@ -38,6 +39,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <AttendeesList />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/attendees"
+              element={
+                <PrivateRoute>
+                  <AllAttendees />
                 </PrivateRoute>
               }
             />

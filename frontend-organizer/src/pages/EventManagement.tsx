@@ -5,6 +5,7 @@ import { eventsApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import './EventManagement.css';
 
+
 const EventManagement = () => {
   const { user } = useAuth();
   const [showForm, setShowForm] = useState(false);
@@ -32,6 +33,8 @@ const EventManagement = () => {
   }>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [confirmDeleteEvent, setConfirmDeleteEvent] = useState<any | null>(null);
+  const [confirmCancelEvent, setConfirmCancelEvent] = useState<any | null>(null);
   const itemsPerPage = 6;
   const queryClient = useQueryClient();
 
@@ -115,9 +118,43 @@ const EventManagement = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => eventsApi.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
+    mutationFn: ({ id, data }: { id: string; data: any }) => {
+      console.log('Updating event with ID:', id, 'Data:', data);
+      return eventsApi.update(id, data);
+    },
+    onSuccess: async (response) => {
+      console.log('Update successful, response:', response);
+      const updatedEventId = String(response.id || editingEventId);
+      const userId = user?.id;
+      
+      // Update the cache directly with the updated event
+      if (userId) {
+        queryClient.setQueryData(['events', userId], (oldData: any) => {
+          if (!oldData) return oldData;
+          const updated = oldData.map((event: any) => 
+            String(event.id) === updatedEventId ? response : event
+          );
+          console.log('Cache updated for user:', userId, 'Updated events:', updated);
+          return updated;
+        });
+      }
+      
+      // Also update any generic events cache
+      queryClient.setQueryData(['events'], (oldData: any) => {
+        if (!oldData) return oldData;
+        return oldData.map((event: any) => 
+          String(event.id) === updatedEventId ? response : event
+        );
+      });
+      
+      // Invalidate all event-related queries to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: ['events'], exact: false });
+      
+      // Force refetch for this organizer's events
+      if (userId) {
+        await queryClient.refetchQueries({ queryKey: ['events', userId] });
+      }
+      
       setShowForm(false);
       setEditingEventId(null);
       setEditingEvent(null);
@@ -139,6 +176,7 @@ const EventManagement = () => {
     },
     onError: (error: any) => {
       console.error('Error updating event:', error);
+      console.error('Error response:', error?.response);
       alert(error?.response?.data?.message || 'Failed to update event. Please try again.');
     },
   });
@@ -147,12 +185,28 @@ const EventManagement = () => {
     mutationFn: (id: string) => eventsApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      setConfirmDeleteEvent(null);
       // Reset to first page if we're on a page that might become empty
       setCurrentPage(1);
     },
     onError: (error: any) => {
-      alert(error?.response?.data?.message || 'Failed to delete event. Please try again.');
+      setConfirmDeleteEvent(null);
+      const errorMessage = error?.response?.data?.message || 'Failed to delete event. Please try again.';
+      alert(errorMessage);
       console.error('Error deleting event:', error);
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: (id: string) => eventsApi.cancel(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      setConfirmCancelEvent(null);
+    },
+    onError: (error: any) => {
+      setConfirmCancelEvent(null);
+      alert(error?.response?.data?.message || 'Failed to cancel event. Please try again.');
+      console.error('Error cancelling event:', error);
     },
   });
 
@@ -233,14 +287,27 @@ const EventManagement = () => {
   const handleEdit = (event: any) => {
     setEditingEventId(event.id);
     setEditingEvent(event); // Store full event data to check registrations
-    // Split dates into date and time components
+    // Split dates into date and time components using local time to avoid timezone conversion
     const startDateObj = new Date(event.startDate);
     const endDateObj = new Date(event.endDate);
     
-    const startDate = startDateObj.toISOString().slice(0, 10); // YYYY-MM-DD
-    const startTime = startDateObj.toISOString().slice(11, 16); // HH:mm
-    const endDate = endDateObj.toISOString().slice(0, 10); // YYYY-MM-DD
-    const endTime = endDateObj.toISOString().slice(11, 16); // HH:mm
+    // Use local time methods instead of UTC to preserve the original time
+    const startYear = startDateObj.getFullYear();
+    const startMonth = String(startDateObj.getMonth() + 1).padStart(2, '0');
+    const startDay = String(startDateObj.getDate()).padStart(2, '0');
+    const startHours = String(startDateObj.getHours()).padStart(2, '0');
+    const startMinutes = String(startDateObj.getMinutes()).padStart(2, '0');
+    
+    const endYear = endDateObj.getFullYear();
+    const endMonth = String(endDateObj.getMonth() + 1).padStart(2, '0');
+    const endDay = String(endDateObj.getDate()).padStart(2, '0');
+    const endHours = String(endDateObj.getHours()).padStart(2, '0');
+    const endMinutes = String(endDateObj.getMinutes()).padStart(2, '0');
+    
+    const startDate = `${startYear}-${startMonth}-${startDay}`;
+    const startTime = `${startHours}:${startMinutes}`;
+    const endDate = `${endYear}-${endMonth}-${endDay}`;
+    const endTime = `${endHours}:${endMinutes}`;
     
     const eventImageUrl = event.imageUrl || '';
     
@@ -344,6 +411,26 @@ const EventManagement = () => {
     // Clear previous errors
     setValidationErrors({});
     
+    // Validate title length
+    if (formData.title.trim().length < 3) {
+      alert('Title must be at least 3 characters long');
+      return;
+    }
+    if (formData.title.length > 50) {
+      alert('Title cannot exceed 50 characters');
+      return;
+    }
+    
+    // Validate description length
+    if (formData.description.trim().length < 10) {
+      alert('Description must be at least 10 characters long');
+      return;
+    }
+    if (formData.description.length > 1000) {
+      alert('Description cannot exceed 1000 characters');
+      return;
+    }
+    
     // Validate dates
     if (!validateDates()) {
       return;
@@ -353,10 +440,16 @@ const EventManagement = () => {
     const startDateTime = combineDateTime(formData.startDate, formData.startTime);
     const endDateTime = combineDateTime(formData.endDate, formData.endTime);
     
+    // Validate that dates are not empty
+    if (!startDateTime || !endDateTime) {
+      alert('Please fill in all date and time fields');
+      return;
+    }
+    
     // Validate capacity
     const capacityNum = parseInt(formData.capacity);
-    if (isNaN(capacityNum) || capacityNum < 1) {
-      alert('Please enter a valid capacity (minimum 1)');
+    if (isNaN(capacityNum) || capacityNum < 1 || capacityNum > 5000) {
+      alert('Please enter a valid capacity (between 1 and 5000)');
       return;
     }
     
@@ -393,8 +486,11 @@ const EventManagement = () => {
       }
     }
     
+    console.log('Submitting event data:', submitData);
+    console.log('Editing event ID:', editingEventId);
+    
     if (editingEventId) {
-      updateMutation.mutate({ id: editingEventId, data: submitData });
+      updateMutation.mutate({ id: String(editingEventId), data: submitData });
     } else {
       createMutation.mutate(submitData);
     }
@@ -428,9 +524,24 @@ const EventManagement = () => {
                 <input
                   type="text"
                   value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value.length <= 50) {
+                      setFormData({ ...formData, title: value });
+                    }
+                  }}
                   required
+                  maxLength={50}
+                  minLength={3}
                 />
+                <div className="character-count">
+                  <span className={formData.title.length > 0 && formData.title.length < 3 ? 'character-count-warning' : ''}>
+                    {formData.title.length} / 50 characters
+                  </span>
+                  {formData.title.length > 0 && formData.title.length < 3 && (
+                    <span className="character-count-error"> (Minimum 3 characters required)</span>
+                  )}
+                </div>
               </div>
               <div className="form-group">
                 <label>Location {editingEventId && editingEvent?.registeredCount > 0 && <span style={{ color: '#e74c3c' }}>*</span>}</label>
@@ -570,16 +681,32 @@ const EventManagement = () => {
                   onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
                   required
                   min="1"
+                  max="5000"
                 />
               </div>
               <div className="form-group full-width">
                 <label>Description</label>
                 <textarea
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value.length <= 1000) {
+                      setFormData({ ...formData, description: value });
+                    }
+                  }}
                   required
                   rows={4}
+                  maxLength={1000}
+                  minLength={10}
                 />
+                <div className="character-count">
+                  <span className={formData.description.length < 10 ? 'character-count-warning' : ''}>
+                    {formData.description.length} / 1000 characters
+                  </span>
+                  {formData.description.length > 0 && formData.description.length < 10 && (
+                    <span className="character-count-error"> (Minimum 10 characters required)</span>
+                  )}
+                </div>
               </div>
               <div className="form-group full-width">
                 <label>Event Image (Optional)</label>
@@ -674,7 +801,6 @@ const EventManagement = () => {
                               src={event.imageUrl} 
                               alt={event.title}
                               onError={(e) => {
-                                // Hide broken images
                                 e.currentTarget.style.display = 'none';
                               }}
                             />
@@ -682,7 +808,7 @@ const EventManagement = () => {
                         )}
                         <div className="event-item-content">
                           <h3>{event.title}</h3>
-                          <p>{event.description}</p>
+                          <p className="event-description-truncated">{event.description}</p>
                           <p>{new Date(event.startDate).toLocaleString()}</p>
                           <p>{event.location}</p>
                           <p>Registered: {event.registeredCount} / {event.capacity}</p>
@@ -695,14 +821,16 @@ const EventManagement = () => {
                             </button>
                             <button 
                               onClick={() => {
-                                if (window.confirm(`Are you sure you want to delete "${event.title}"? This action cannot be undone.`)) {
-                                  deleteMutation.mutate(event.id);
+                                if (event.registeredCount > 0) {
+                                  setConfirmCancelEvent(event);
+                                } else {
+                                  setConfirmDeleteEvent(event);
                                 }
                               }} 
                               className="btn-delete"
-                              disabled={deleteMutation.isPending}
+                              disabled={deleteMutation.isPending || cancelMutation.isPending}
                             >
-                              Delete
+                              {event.registeredCount > 0 ? 'Cancel' : 'Delete'}
                             </button>
                           </div>
                         </div>
@@ -737,6 +865,67 @@ const EventManagement = () => {
           })()}
         </div>
       </div>
+
+      {/* Confirmation Popups */}
+      {confirmDeleteEvent && (
+        <div className="confirm-popup-overlay" onClick={() => setConfirmDeleteEvent(null)}>
+          <div className="confirm-popup-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-popup-content">
+              <h3>Confirm Deletion</h3>
+              <p>Are you sure you want to delete "{confirmDeleteEvent.title}"?</p>
+              <p className="confirm-warning">This action cannot be undone.</p>
+              <div className="confirm-popup-actions">
+                <button
+                  className="confirm-btn confirm-delete"
+                  onClick={() => {
+                    deleteMutation.mutate(confirmDeleteEvent.id);
+                  }}
+                  disabled={deleteMutation.isPending}
+                >
+                  {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                </button>
+                <button
+                  className="confirm-btn confirm-cancel"
+                  onClick={() => setConfirmDeleteEvent(null)}
+                  disabled={deleteMutation.isPending}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmCancelEvent && (
+        <div className="confirm-popup-overlay" onClick={() => setConfirmCancelEvent(null)}>
+          <div className="confirm-popup-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-popup-content">
+              <h3>Cancel Event</h3>
+              <p>This event has {confirmCancelEvent.registeredCount} registration(s). Events with registrations cannot be deleted.</p>
+              <p>Would you like to cancel this event? All registered users will be notified via email, and the event will be deleted immediately.</p>
+              <div className="confirm-popup-actions">
+                <button
+                  className="confirm-btn confirm-cancel-action"
+                  onClick={() => {
+                    cancelMutation.mutate(confirmCancelEvent.id);
+                  }}
+                  disabled={cancelMutation.isPending}
+                >
+                  {cancelMutation.isPending ? 'Cancelling...' : 'Yes, Cancel Event'}
+                </button>
+                <button
+                  className="confirm-btn confirm-cancel"
+                  onClick={() => setConfirmCancelEvent(null)}
+                  disabled={cancelMutation.isPending}
+                >
+                  No, Keep Event
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };

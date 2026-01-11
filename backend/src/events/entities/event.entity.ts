@@ -13,8 +13,8 @@ import { Ticket } from '../../tickets/entities/ticket.entity';
 
 @Entity('events')
 export class Event {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column()
   title: string;
@@ -37,18 +37,28 @@ export class Event {
   @Column({ default: 0 })
   registeredCount: number;
 
-  @Column({ default: true })
+  @Column({
+    type: 'integer',
+    default: 1,
+    transformer: {
+      to: (value: boolean) => value ? 1 : 0,
+      from: (value: number) => value === 1,
+    },
+  })
   isActive: boolean;
 
   @Column({ type: 'text', nullable: true })
   imageUrl: string;
+
+  @Column({ type: 'datetime', nullable: true })
+  cancelledAt: Date;
 
   @ManyToOne(() => User, (user) => user.events)
   @JoinColumn({ name: 'organizerId' })
   organizer: User;
 
   @Column()
-  organizerId: string;
+  organizerId: number;
 
   @OneToMany(() => Ticket, (ticket) => ticket.event)
   tickets: Ticket[];

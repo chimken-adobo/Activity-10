@@ -17,10 +17,11 @@ function App() {
       <AuthProvider>
         <Router>
           <Routes>
+            <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route
-              path="/"
+              path="/home"
               element={
                 <PrivateRoute>
                   <Landing />

@@ -1,13 +1,17 @@
-import { IsString, IsNotEmpty, IsDateString, IsNumber, Min, ValidateIf } from 'class-validator';
+import { IsString, IsNotEmpty, IsDateString, IsNumber, Min, Max, ValidateIf, MaxLength, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class CreateEventDto {
   @IsString()
   @IsNotEmpty()
+  @MinLength(3)
+  @MaxLength(50)
   title: string;
 
   @IsString()
   @IsNotEmpty()
+  @MinLength(10)
+  @MaxLength(1000)
   description: string;
 
   @IsString()
@@ -22,6 +26,7 @@ export class CreateEventDto {
 
   @IsNumber()
   @Min(1)
+  @Max(5000)
   capacity: number;
 
   @Transform(({ value }) => {

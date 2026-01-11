@@ -7,6 +7,7 @@ import './UserManagement.css';
 const UserManagement = () => {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
+  const [deleteConfirmUserId, setDeleteConfirmUserId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -39,19 +40,38 @@ const UserManagement = () => {
     },
   });
 
-  const toggleActiveMutation = useMutation({
-    mutationFn: (id: string) => usersApi.toggleActive(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-    },
-  });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => usersApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      setDeleteConfirmUserId(null);
     },
   });
+
+  const toggleActiveMutation = useMutation({
+    mutationFn: (id: string) => usersApi.toggleActive(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error: any) => {
+      alert(error?.response?.data?.message || 'Failed to toggle user status');
+    },
+  });
+
+  const handleDeleteClick = (userId: string) => {
+    setDeleteConfirmUserId(userId);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deleteConfirmUserId) {
+      deleteMutation.mutate(deleteConfirmUserId);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirmUserId(null);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,17 +86,17 @@ const UserManagement = () => {
   return (
     <Layout>
       <div className="user-management">
-        <div className="page-header">
+        <div className="user-management-header">
           <h1>User Management</h1>
-          <button onClick={() => setShowForm(!showForm)} className="btn-primary">
+          <button onClick={() => setShowForm(!showForm)} className="btn-create">
             {showForm ? 'Cancel' : 'Create User'}
           </button>
         </div>
 
         {showForm && (
-          <form onSubmit={handleSubmit} className="user-form">
+          <form onSubmit={handleSubmit} className="create-form">
             <h2>Create New User</h2>
-            <div className="form-grid">
+            <div className="form-row">
               <div className="form-group">
                 <label>Email *</label>
                 <input
@@ -155,24 +175,45 @@ const UserManagement = () => {
                   </td>
                   <td>{user.company || 'N/A'}</td>
                   <td>
-                    <span className={user.isActive ? 'status-active' : 'status-inactive'}>
+                    <span className={`status-badge ${user.isActive ? 'status-active' : 'status-inactive'}`}>
                       {user.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td>
                     <div className="actions">
-                      <button
-                        onClick={() => toggleActiveMutation.mutate(user.id)}
-                        className="btn-toggle"
-                      >
-                        {user.isActive ? 'Deactivate' : 'Activate'}
-                      </button>
-                      <button
-                        onClick={() => deleteMutation.mutate(user.id)}
-                        className="btn-delete"
-                      >
-                        Delete
-                      </button>
+                      {(user.role === 'attendee' || user.role === 'organizer') && (
+                        <button
+                          onClick={() => toggleActiveMutation.mutate(user.id)}
+                          className={user.isActive ? 'btn-deactivate' : 'btn-activate'}
+                          disabled={
+                            toggleActiveMutation.isPending ||
+                            (user.isActive && (
+                              (user.role === 'organizer' && (user.eventCount || 0) > 0) ||
+                              (user.role === 'attendee' && (user.ticketCount || 0) > 0)
+                            ))
+                          }
+                          title={
+                            user.isActive && (
+                              (user.role === 'organizer' && (user.eventCount || 0) > 0) ||
+                              (user.role === 'attendee' && (user.ticketCount || 0) > 0)
+                            )
+                              ? `Cannot deactivate ${user.role} with ${user.role === 'organizer' ? (user.eventCount || 0) : (user.ticketCount || 0)} ${user.role === 'organizer' ? 'event(s)' : 'registration(s)'}`
+                              : ''
+                          }
+                        >
+                          {user.isActive ? 'Deactivate' : 'Activate'}
+                        </button>
+                      )}
+                      {user.role === 'admin' || user.role === 'organizer' ? (
+                        <span className="cannot-delete-text">This can't be deleted</span>
+                      ) : (
+                        <button
+                          onClick={() => handleDeleteClick(user.id)}
+                          className="btn-delete"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -180,6 +221,29 @@ const UserManagement = () => {
             </tbody>
           </table>
         </div>
+
+        {deleteConfirmUserId && (
+          <div className="delete-confirm-overlay" onClick={handleDeleteCancel}>
+            <div className="delete-confirm-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="delete-confirm-content">
+                <h3>Confirm Delete</h3>
+                <p>Are you sure you really want to delete this user? This action cannot be undone.</p>
+                <div className="delete-confirm-actions">
+                  <button onClick={handleDeleteCancel} className="btn-cancel">
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteConfirm}
+                    className="btn-confirm-delete"
+                    disabled={deleteMutation.isPending}
+                  >
+                    {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );

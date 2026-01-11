@@ -1,9 +1,13 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Layout from '../components/Layout';
 import { eventsApi, ticketsApi } from '../services/api';
 import './Dashboard.css';
 
 const Dashboard = () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+
   const { data: events } = useQuery({
     queryKey: ['events'],
     queryFn: () => eventsApi.getAll({ isActive: true }),
@@ -14,9 +18,15 @@ const Dashboard = () => {
     queryFn: () => ticketsApi.getAll(),
   });
 
-  const upcomingEvents = events?.filter(
+  const allUpcomingEvents = events?.filter(
     (event: any) => new Date(event.startDate) > new Date()
-  ).slice(0, 5) || [];
+  ) || [];
+
+  // Calculate pagination
+  const totalPages = Math.ceil(allUpcomingEvents.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const upcomingEvents = allUpcomingEvents.slice(startIndex, endIndex);
 
   const checkedInTickets = tickets?.filter(
     (ticket: any) => ticket.status === 'checked_in'
@@ -43,22 +53,70 @@ const Dashboard = () => {
           </div>
           <div className="stat-card">
             <h3>Upcoming Events</h3>
-            <p className="stat-number">{upcomingEvents.length}</p>
+            <p className="stat-number">{allUpcomingEvents.length}</p>
           </div>
         </div>
 
         <div className="section">
           <h2>Upcoming Events</h2>
           <div className="events-list">
-            {upcomingEvents.map((event: any) => (
-              <div key={event.id} className="event-card">
-                <h3>{event.title}</h3>
-                <p>{new Date(event.startDate).toLocaleDateString()}</p>
-                <p>{event.location}</p>
-                <p>Registered: {event.registeredCount} / {event.capacity}</p>
-              </div>
-            ))}
+            {upcomingEvents.length === 0 ? (
+              <div className="no-events">No upcoming events found.</div>
+            ) : (
+              upcomingEvents.map((event: any) => (
+                <div key={event.id} className="event-card">
+                  <div className="event-card-header">
+                    <h3>{event.title}</h3>
+                  </div>
+                  <div className="event-card-details">
+                    <div className="event-detail-item">
+                      <span className="detail-icon">📅</span>
+                      <div className="detail-content">
+                        <span className="detail-label">Date</span>
+                        <span className="detail-value">{new Date(event.startDate).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    <div className="event-detail-item">
+                      <span className="detail-icon">📍</span>
+                      <div className="detail-content">
+                        <span className="detail-label">Location</span>
+                        <span className="detail-value">{event.location}</span>
+                      </div>
+                    </div>
+                    <div className="event-detail-item">
+                      <span className="detail-icon">👥</span>
+                      <div className="detail-content">
+                        <span className="detail-label">Registration</span>
+                        <span className="detail-value">Registered: {event.registeredCount} / {event.capacity}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
+          
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="pagination-btn"
+              >
+                Previous
+              </button>
+              <div className="pagination-info">
+                <span>Page {currentPage} of {totalPages}</span>
+              </div>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="pagination-btn"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </Layout>
